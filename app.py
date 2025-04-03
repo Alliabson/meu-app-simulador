@@ -4,18 +4,35 @@ import locale
 from math import ceil
 from io import BytesIO
 import os
+import subprocess
 import sys
 
-# --- Configuração simplificada de locale (obrigatória para o Streamlit Cloud) ---
-locale.setlocale(locale.LC_ALL, 'C.UTF-8')  # Única configuração necessária
+# Configura locale antes de qualquer operação
+if not os.environ.get('LANG'):
+    os.environ['LANG'] = 'pt_BR.UTF-8'
 
-# --- Imports convencionais (NUNCA use instalação dinâmica no Streamlit Cloud) ---
-import pandas as pd
-import numpy as np
-from fpdf import FPDF
-import numpy_financial as npf
+try:
+    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+except locale.Error:
+    try:
+        locale.setlocale(locale.LC_ALL, 'Portuguese_Brazil.1252')
+    except locale.Error:
+        locale.setlocale(locale.LC_ALL, 'C.UTF-8')
+        st.warning("Configuração de locale específica não disponível. Usando padrão internacional.")
 
-# --- Remove a função install_and_import (não é mais usada) ---
+# Instalação garantida de dependências
+def install_and_import(package, import_name=None):
+    import_name = import_name or package
+    try:
+        return __import__(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+        return __import__(import_name)
+
+pd = install_and_import('pandas')
+np = install_and_import('numpy')
+FPDF = install_and_import('fpdf2', 'fpdf').FPDF
+npf = install_and_import('numpy-financial', 'numpy_financial')
 
 # Configuração do tema Streamlit
 def set_theme():
@@ -527,10 +544,22 @@ def main():
         with col2:
             qtd_parcelas = st.number_input("Quantidade de Parcelas", min_value=1, value=120, step=1)
             
-            if modalidade in ["mensal + balão", "só balão anual", "só balão semestral"]:
-                tipo_balao = "anual" if modalidade != "só balão semestral" else "semestral"
+            # ADIÇÃO: Seletor de Tipo de Balão (apenas para "mensal + balão")
+            if modalidade == "mensal + balão":
+                tipo_balao = st.selectbox(
+                    "Tipo de Balão",
+                    options=["anual", "semestral"],
+                    index=0
+                )
                 qtd_baloes = atualizar_baloes(modalidade, qtd_parcelas, tipo_balao)
-                st.write(f"Quantidade de Balões: {qtd_baloes}")
+            elif modalidade in ["só balão anual", "só balão semestral"]:
+                tipo_balao = "anual" if modalidade == "só balão anual" else "semestral"
+                qtd_baloes = atualizar_baloes(modalidade, qtd_parcelas, tipo_balao)
+            else:
+                tipo_balao = None
+                qtd_baloes = 0
+            
+            st.write(f"Quantidade de Balões: {qtd_baloes}")
             
             valor_parcela = st.number_input("Valor da Parcela (R$ - deixe 0 para cálculo automático)", 
                                           min_value=0.0, value=0.0, step=100.0)
@@ -561,8 +590,6 @@ def main():
             taxas = calcular_taxas(taxa_mensal)
             comissoes = calcular_comissoes(valor_total, comissao_coordenacao, comissao_imobiliaria)
             
-            qtd_baloes = atualizar_baloes(modalidade, qtd_parcelas, tipo_balao if 'tipo_balao' in locals() else 'anual')
-            
             modo = determinar_modo_calculo(modalidade)
             
             if modo == 1:  # Somente parcelas mensais
@@ -588,9 +615,15 @@ def main():
                 qtd_parcelas = 0
             
             cronograma = gerar_cronograma(
-                valor_financiado, valor_parcela, valor_balao,
-                qtd_parcelas, qtd_baloes, modalidade, tipo_balao if 'tipo_balao' in locals() else 'anual',
-                data_entrada, taxas
+                valor_financiado, 
+                valor_parcela, 
+                valor_balao,
+                qtd_parcelas, 
+                qtd_baloes, 
+                modalidade, 
+                tipo_balao,
+                data_entrada, 
+                taxas
             )
             
             # Mostrar resultados
