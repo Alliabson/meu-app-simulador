@@ -1,20 +1,38 @@
 import streamlit as st
 from datetime import datetime, timedelta
-import numpy_financial as npf
-import pandas as pd
-from fpdf import FPDF
 import locale
 from math import ceil
-import numpy as np
 from io import BytesIO
+import os
+import subprocess
+import sys
 
-# Configurações iniciais
-st.set_page_config(page_title="Simulador de Financiamento", layout="wide")
+# Configura locale antes de qualquer operação
+if not os.environ.get('LANG'):
+    os.environ['LANG'] = 'pt_BR.UTF-8'
 
 try:
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-except:
-    locale.setlocale(locale.LC_ALL, 'Portuguese_Brazil.1252')
+except locale.Error:
+    try:
+        locale.setlocale(locale.LC_ALL, 'Portuguese_Brazil.1252')
+    except locale.Error:
+        locale.setlocale(locale.LC_ALL, 'C.UTF-8')
+        st.warning("Configuração de locale específica não disponível. Usando padrão internacional.")
+
+# Instalação garantida de dependências
+def install_and_import(package, import_name=None):
+    import_name = import_name or package
+    try:
+        return __import__(import_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+        return __import__(import_name)
+
+pd = install_and_import('pandas')
+np = install_and_import('numpy')
+FPDF = install_and_import('fpdf2', 'fpdf').FPDF
+npf = install_and_import('numpy-financial', 'numpy_financial')
 
 # Configuração do tema Streamlit
 def set_theme():
@@ -461,7 +479,11 @@ def gerar_pdf(cronograma, dados):
         pdf.cell(larguras[4], 10, txt=formatar_moeda(total['Valor_Presente']), border=1)
         
         pdf_output = BytesIO()
-        pdf_output.write(pdf.output(dest='S').encode('latin1'))  # Usamos 'S' para string e codificamos
+        pdf_data = pdf.output(dest='S')
+        # Verifica se precisa codificar (para Python 3.x)
+        if isinstance(pdf_data, str):
+            pdf_data = pdf_data.encode('latin1')
+        pdf_output.write(pdf_data)
         pdf_output.seek(0)
         
         return pdf_output
@@ -471,6 +493,14 @@ def gerar_pdf(cronograma, dados):
 
 def gerar_excel(cronograma):
     try:
+        # Verifica e instala openpyxl se necessário
+        try:
+            import openpyxl
+        except ImportError:
+            import subprocess
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
+            import openpyxl
+            
         output = BytesIO()
         
         df = pd.DataFrame([p for p in cronograma if p['Item'] != 'TOTAL'])
@@ -478,10 +508,11 @@ def gerar_excel(cronograma):
         
         df = pd.concat([df, pd.DataFrame([total])], ignore_index=True)
         
-        # Formatação de moeda para as colunas numéricas
+        # Formatação de moeda
         for col in ['Valor', 'Valor_Presente', 'Desconto_Aplicado']:
             df[col] = df[col].apply(lambda x: formatar_moeda(x) if pd.notnull(x) else 'R$ 0,00')
         
+        # Garante que o ExcelWriter usará openpyxl
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False)
         
