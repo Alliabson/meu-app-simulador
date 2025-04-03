@@ -1,11 +1,28 @@
 import streamlit as st
 from datetime import datetime, timedelta
 import pandas as pd
-from fpdf import FPDF
 import locale
 from math import ceil
 import numpy as np
 from io import BytesIO
+try:
+    from fpdf import FPDF
+except ImportError:
+    import subprocess
+    import sys
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "fpdf2"])
+    from fpdf import FPDF
+# Garante que numpy-financial está instalado e importado
+try:
+    import numpy_financial as npf
+except ImportError:
+    import subprocess
+    import sys
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy-financial"])
+    import numpy_financial as npf
+
+
+# Mantenha todas as suas funções e lógica
 
 # Configurações iniciais
 st.set_page_config(page_title="Simulador de Financiamento", layout="wide")
