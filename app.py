@@ -4,35 +4,18 @@ import locale
 from math import ceil
 from io import BytesIO
 import os
-import subprocess
 import sys
 
-# Configura locale antes de qualquer operação
-if not os.environ.get('LANG'):
-    os.environ['LANG'] = 'pt_BR.UTF-8'
+# --- Configuração simplificada de locale (obrigatória para o Streamlit Cloud) ---
+locale.setlocale(locale.LC_ALL, 'C.UTF-8')  # Única configuração necessária
 
-try:
-    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-except locale.Error:
-    try:
-        locale.setlocale(locale.LC_ALL, 'Portuguese_Brazil.1252')
-    except locale.Error:
-        locale.setlocale(locale.LC_ALL, 'C.UTF-8')
-        st.warning("Configuração de locale específica não disponível. Usando padrão internacional.")
+# --- Imports convencionais (NUNCA use instalação dinâmica no Streamlit Cloud) ---
+import pandas as pd
+import numpy as np
+from fpdf import FPDF
+import numpy_financial as npf
 
-# Instalação garantida de dependências
-def install_and_import(package, import_name=None):
-    import_name = import_name or package
-    try:
-        return __import__(import_name)
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-        return __import__(import_name)
-
-pd = install_and_import('pandas')
-np = install_and_import('numpy')
-FPDF = install_and_import('fpdf2', 'fpdf').FPDF
-npf = install_and_import('numpy-financial', 'numpy_financial')
+# --- Remove a função install_and_import (não é mais usada) ---
 
 # Configuração do tema Streamlit
 def set_theme():
