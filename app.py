@@ -1,6 +1,5 @@
 import streamlit as st
 from datetime import datetime, timedelta
-import numpy_financial as npf
 import pandas as pd
 from fpdf import FPDF
 import locale
@@ -10,6 +9,31 @@ from io import BytesIO
 
 # Configurações iniciais
 st.set_page_config(page_title="Simulador de Financiamento", layout="wide")
+
+# Funções substitutas para numpy_financial
+def npf_pmt(rate, nper, pv, fv=0, when='end'):
+    """
+    Calcula o pagamento periódico (PMT) equivalente ao numpy_financial.pmt
+    """
+    when = when.lower()
+    if when not in ['begin', 'end']:
+        raise ValueError("when must be 'begin' or 'end'")
+    
+    temp = (1 + rate)**nper
+    fact = np.where(rate == 0, nper, (1 + rate * (when == 'begin')) * (temp - 1) / rate)
+    return -(fv + pv * temp) / fact
+
+def npf_pv(rate, nper, pmt, fv=0, when='end'):
+    """
+    Calcula o valor presente (PV) equivalente ao numpy_financial.pv
+    """
+    when = when.lower()
+    if when not in ['begin', 'end']:
+        raise ValueError("when must be 'begin' or 'end'")
+    
+    temp = (1 + rate)**nper
+    fact = np.where(rate == 0, nper, (1 + rate * (when == 'begin')) * (temp - 1) / rate)
+    return -(fv + pmt * fact) / temp
 
 try:
     locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
@@ -213,7 +237,7 @@ def calcular_parcela(valor, taxa, periodos):
         if periodos <= 0 or taxa <= 0 or valor <= 0:
             return 0
             
-        parcela = npf.pmt(taxa, periodos, -valor)
+        parcela = npf_pmt(taxa, periodos, -valor)
         
         if parcela is None or isinstance(parcela, str) or np.isnan(parcela) or np.isinf(parcela):
             return 0
@@ -228,7 +252,7 @@ def calcular_valor_presente_total(valor, taxa, periodos):
         if periodos <= 0 or taxa <= 0:
             return 0
             
-        valor_presente = npf.pv(taxa, periodos, -valor)
+        valor_presente = npf_pv(taxa, periodos, -valor)
         
         if np.isnan(valor_presente) or np.isinf(valor_presente):
             return 0
@@ -461,7 +485,7 @@ def gerar_pdf(cronograma, dados):
         pdf.cell(larguras[4], 10, txt=formatar_moeda(total['Valor_Presente']), border=1)
         
         pdf_output = BytesIO()
-        pdf_output.write(pdf.output(dest='S').encode('latin1'))  # Usamos 'S' para string e codificamos
+        pdf_output.write(pdf.output(dest='S').encode('latin1'))
         pdf_output.seek(0)
         
         return pdf_output
@@ -478,7 +502,6 @@ def gerar_excel(cronograma):
         
         df = pd.concat([df, pd.DataFrame([total])], ignore_index=True)
         
-        # Formatação de moeda para as colunas numéricas
         for col in ['Valor', 'Valor_Presente', 'Desconto_Aplicado']:
             df[col] = df[col].apply(lambda x: formatar_moeda(x) if pd.notnull(x) else 'R$ 0,00')
         
@@ -501,7 +524,7 @@ def main():
         with col1:
             valor_total = st.number_input("Valor Total do Imóvel (R$)", min_value=0.0, value=500000.0, step=1000.0)
             entrada = st.number_input("Entrada (R$)", min_value=0.0, value=50000.0, step=1000.0, max_value=valor_total)
-            data_input = st.date_input("Data de Entrada", value=datetime.now(),format="DD/MM/YYYY")
+            data_input = st.date_input("Data de Entrada", value=datetime.now(), format="DD/MM/YYYY")
             data_entrada = datetime.combine(data_input, datetime.min.time())
             taxa_mensal = st.number_input("Taxa de Juros Mensal (%)", min_value=0.0, value=0.79, step=0.01)
             modalidade = st.selectbox(
@@ -547,7 +570,9 @@ def main():
             taxas = calcular_taxas(taxa_mensal)
             comissoes = calcular_comissoes(valor_total, comissao_coordenacao, comissao_imobiliaria)
             
-            qtd_baloes = atualizar_baloes(modalidade, qtd_parcelas, tipo_balao if 'tipo_balao' in locals() else 'anual')
+            if modalidade in ["mensal + balão", "só balão anual", "só balão semestral"]:
+                tipo_balao = "anual" if modalidade != "só balão semestral" else "semestral"
+                qtd_baloes = atualizar_baloes(modalidade, qtd_parcelas, tipo_balao)
             
             modo = determinar_modo_calculo(modalidade)
             
@@ -575,7 +600,7 @@ def main():
             
             cronograma = gerar_cronograma(
                 valor_financiado, valor_parcela, valor_balao,
-                qtd_parcelas, qtd_baloes, modalidade, tipo_balao if 'tipo_balao' in locals() else 'anual',
+                qtd_parcelas, qtd_baloes, modalidade, tipo_balao,
                 data_entrada, taxas
             )
             
@@ -605,7 +630,6 @@ def main():
             
             df_cronograma = pd.DataFrame([p for p in cronograma if p['Item'] != 'TOTAL'])
             
-            # Formatação das colunas numéricas
             df_cronograma['Valor'] = df_cronograma['Valor'].apply(lambda x: formatar_moeda(x))
             df_cronograma['Valor_Presente'] = df_cronograma['Valor_Presente'].apply(lambda x: formatar_moeda(x))
             df_cronograma['Desconto_Aplicado'] = df_cronograma['Desconto_Aplicado'].apply(lambda x: formatar_moeda(x))
