@@ -115,21 +115,33 @@ def set_theme():
     </style>
     """, unsafe_allow_html=True)
 
-def formatar_moeda(valor):
+def formatar_moeda(valor, simbolo=True):
     try:
         if valor is None:
-            return "R$ 0,00"
+            return "R$ 0,00" if simbolo else "0,00"
         if isinstance(valor, str):
+            # Remove caracteres não numéricos
+            valor = re.sub(r'[^\d,]', '', valor).replace(',', '.')
             valor = float(valor)
         
-        # Tenta usar o locale configurado
-        try:
-            return locale.currency(valor, grouping=True, symbol=True)
-        except:
-            # Fallback manual se o locale falhar
-            return f"R$ {float(valor or 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        # Formatação manual para garantir o padrão pt_BR
+        valor_formatado = f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        if simbolo:
+            return f"R$ {valor_formatado}"
+        return valor_formatado
     except:
-        return "R$ 0,00"
+        return "R$ 0,00" if simbolo else "0,00"
+
+def parse_moeda(valor_str):
+    try:
+        if isinstance(valor_str, (int, float)):
+            return float(valor_str)
+        
+        # Remove R$, pontos e espaços, substitui vírgula por ponto
+        valor_limpo = re.sub(r'[^\d,]', '', valor_str).replace(',', '.')
+        return float(valor_limpo)
+    except:
+        return 0.0
 
 def calcular_taxas(taxa_mensal):
     try:
@@ -529,13 +541,38 @@ def main():
     set_theme()
     st.title("Simulador de Financiamento Imobiliário")
     
+    # Inicializa variáveis de sessão
+    if 'valor_total' not in st.session_state:
+        st.session_state.valor_total = 500000.0
+    if 'entrada' not in st.session_state:
+        st.session_state.entrada = 50000.0
+    if 'valor_parcela' not in st.session_state:
+        st.session_state.valor_parcela = 0.0
+    if 'valor_balao' not in st.session_state:
+        st.session_state.valor_balao = 0.0
+    
     with st.form("simulador_form"):
         col1, col2 = st.columns(2)
         
         with col1:
-            valor_total = st.number_input("Valor Total do Imóvel (R$)", min_value=0.0, value=500000.0, step=1000.0)
-            entrada = st.number_input("Entrada (R$)", min_value=0.0, value=50000.0, step=1000.0, max_value=valor_total)
-            data_input = st.date_input("Data de Entrada", value=datetime.now(),format="DD/MM/YYYY")
+            # Inputs numéricos com formatação manual
+            valor_total = st.number_input(
+                "Valor Total do Imóvel (R$)", 
+                min_value=0.0, 
+                value=st.session_state.valor_total, 
+                step=1000.0,
+                format="%.2f"
+            )
+            entrada = st.number_input(
+                "Entrada (R$)", 
+                min_value=0.0, 
+                value=st.session_state.entrada, 
+                step=1000.0, 
+                max_value=valor_total,
+                format="%.2f"
+            )
+            
+            data_input = st.date_input("Data de Entrada", value=datetime.now(), format="DD/MM/YYYY")
             data_entrada = datetime.combine(data_input, datetime.min.time())
             taxa_mensal = st.number_input("Taxa de Juros Mensal (%)", min_value=0.0, value=0.79, step=0.01)
             modalidade = st.selectbox(
@@ -566,21 +603,38 @@ def main():
                 qtd_baloes = atualizar_baloes(modalidade, qtd_parcelas, tipo_balao.lower() if tipo_balao else None)
                 st.write(f"Quantidade de Balões: {qtd_baloes}")
             
-            valor_parcela = st.number_input("Valor da Parcela (R$ - deixe 0 para cálculo automático)", 
-                                          min_value=0.0, value=0.0, step=100.0)
+            valor_parcela = st.number_input(
+                "Valor da Parcela (R$ - deixe 0 para cálculo automático)", 
+                min_value=0.0, 
+                value=st.session_state.valor_parcela, 
+                step=100.0,
+                format="%.2f"
+            )
             
             valor_balao = 0.0
             if modalidade in ["mensal + balão", "só balão anual", "só balão semestral"]:
-                valor_balao = st.number_input("Valor do Balão (R$ - deixe 0 para cálculo automático)", 
-                                            min_value=0.0, value=0.0, step=1000.0)
+                valor_balao = st.number_input(
+                    "Valor do Balão (R$ - deixe 0 para cálculo automático)", 
+                    min_value=0.0, 
+                    value=st.session_state.valor_balao, 
+                    step=1000.0,
+                    format="%.2f"
+                )
             
             comissao_coordenacao = st.number_input("Comissão de Coordenação (%)", min_value=0.0, value=0.5, step=0.1)
             comissao_imobiliaria = st.number_input("Comissão Imobiliária (%)", min_value=0.0, value=5.0, step=0.1)
         
+        # Botão de submit dentro do form
         submitted = st.form_submit_button("Calcular")
     
     if submitted:
         try:
+            # Atualiza os valores na sessão
+            st.session_state.valor_total = valor_total
+            st.session_state.entrada = entrada
+            st.session_state.valor_parcela = valor_parcela
+            st.session_state.valor_balao = valor_balao
+            
             if valor_total <= 0 or entrada < 0:
                 st.error("Valor total e entrada são obrigatórios")
                 return
