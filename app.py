@@ -44,6 +44,9 @@ np = install_and_import('numpy')
 FPDF = install_and_import('fpdf2', 'fpdf').FPDF
 npf = install_and_import('numpy-financial', 'numpy_financial')
 
+#Executar em wide
+st.set_page_config(layout="wide")
+
 # Configuração do tema Streamlit
 def set_theme():
     st.markdown("""
