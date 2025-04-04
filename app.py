@@ -255,7 +255,7 @@ def calcular_valor_presente_total(valor, taxa, periodos):
     except:
         return 0
 
-def atualizar_baloes(modalidade, qtd_parcelas, tipo_balao):
+def atualizar_baloes(modalidade, qtd_parcelas, tipo_balao=None):
     try:
         qtd_parcelas = int(qtd_parcelas)
         if modalidade == "mensal + balão":
@@ -541,7 +541,8 @@ def main():
                 index=0
             )
             
-            # NOVO SELETOR DE TIPO DE BALÃO (só aparece quando modalidade é "mensal + balão")
+            # Seletor de Tipo de Balão (só aparece quando modalidade é "mensal + balão")
+            tipo_balao = None
             if modalidade == "mensal + balão":
                 tipo_balao = st.selectbox(
                     "Tipo de balão:",
@@ -552,27 +553,23 @@ def main():
                 tipo_balao = "Anual"
             elif modalidade == "só balão semestral":
                 tipo_balao = "Semestral"
-            else:
-                tipo_balao = None
         
         with col2:
             qtd_parcelas = st.number_input("Quantidade de Parcelas", min_value=1, value=120, step=1)
             
             # Atualiza quantidade de balões baseado na modalidade e tipo de balão
+            qtd_baloes = 0
             if modalidade in ["mensal + balão", "só balão anual", "só balão semestral"]:
-                qtd_baloes = atualizar_baloes(modalidade, qtd_parcelas, tipo_balao.lower())
+                qtd_baloes = atualizar_baloes(modalidade, qtd_parcelas, tipo_balao.lower() if tipo_balao else None)
                 st.write(f"Quantidade de Balões: {qtd_baloes}")
-            else:
-                qtd_baloes = 0
             
             valor_parcela = st.number_input("Valor da Parcela (R$ - deixe 0 para cálculo automático)", 
                                           min_value=0.0, value=0.0, step=100.0)
             
+            valor_balao = 0.0
             if modalidade in ["mensal + balão", "só balão anual", "só balão semestral"]:
                 valor_balao = st.number_input("Valor do Balão (R$ - deixe 0 para cálculo automático)", 
                                             min_value=0.0, value=0.0, step=1000.0)
-            else:
-                valor_balao = 0.0
             
             comissao_coordenacao = st.number_input("Comissão de Coordenação (%)", min_value=0.0, value=0.5, step=0.1)
             comissao_imobiliaria = st.number_input("Comissão Imobiliária (%)", min_value=0.0, value=5.0, step=0.1)
@@ -625,7 +622,7 @@ def main():
                 qtd_parcelas, 
                 qtd_baloes, 
                 modalidade, 
-                tipo_balao.lower(),
+                tipo_balao.lower() if tipo_balao else None,
                 data_entrada, 
                 taxas
             )
