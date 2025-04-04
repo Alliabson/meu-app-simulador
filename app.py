@@ -558,7 +558,7 @@ def gerar_excel(cronograma):
 
 def main():
     set_theme()
-    st.title("Simulador de Financiamento Imobiliário")
+    st.title("Simulador Imobiliária Celeste")
     
     # Inicializa variáveis de sessão
     if 'valor_total' not in st.session_state:
