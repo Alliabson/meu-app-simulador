@@ -540,26 +540,30 @@ def main():
                 options=["mensal", "mensal + balão", "só balão anual", "só balão semestral"],
                 index=0
             )
+            
+            # NOVO SELETOR DE TIPO DE BALÃO (só aparece quando modalidade é "mensal + balão")
+            if modalidade == "mensal + balão":
+                tipo_balao = st.selectbox(
+                    "Tipo de balão:",
+                    options=["Anual", "Semestral"],
+                    index=0
+                )
+            elif modalidade == "só balão anual":
+                tipo_balao = "Anual"
+            elif modalidade == "só balão semestral":
+                tipo_balao = "Semestral"
+            else:
+                tipo_balao = None
         
         with col2:
             qtd_parcelas = st.number_input("Quantidade de Parcelas", min_value=1, value=120, step=1)
             
-            # ADIÇÃO: Seletor de Tipo de Balão (apenas para "mensal + balão")
-            if modalidade == "mensal + balão":
-                tipo_balao = st.selectbox(
-                    "Tipo de Balão",
-                    options=["anual", "semestral"],
-                    index=0
-                )
-                qtd_baloes = atualizar_baloes(modalidade, qtd_parcelas, tipo_balao)
-            elif modalidade in ["só balão anual", "só balão semestral"]:
-                tipo_balao = "anual" if modalidade == "só balão anual" else "semestral"
-                qtd_baloes = atualizar_baloes(modalidade, qtd_parcelas, tipo_balao)
+            # Atualiza quantidade de balões baseado na modalidade e tipo de balão
+            if modalidade in ["mensal + balão", "só balão anual", "só balão semestral"]:
+                qtd_baloes = atualizar_baloes(modalidade, qtd_parcelas, tipo_balao.lower())
+                st.write(f"Quantidade de Balões: {qtd_baloes}")
             else:
-                tipo_balao = None
                 qtd_baloes = 0
-            
-            st.write(f"Quantidade de Balões: {qtd_baloes}")
             
             valor_parcela = st.number_input("Valor da Parcela (R$ - deixe 0 para cálculo automático)", 
                                           min_value=0.0, value=0.0, step=100.0)
@@ -600,9 +604,9 @@ def main():
                 if valor_parcela > 0:
                     saldo_parcelas = calcular_valor_presente_total(valor_parcela, taxas['mensal'], qtd_parcelas)
                     saldo_baloes = max(valor_financiado - saldo_parcelas, 0)
-                    valor_balao = calcular_parcela(saldo_baloes, taxas[tipo_balao], qtd_baloes)
+                    valor_balao = calcular_parcela(saldo_baloes, taxas[tipo_balao.lower()], qtd_baloes)
                 else:
-                    saldo_baloes = calcular_valor_presente_total(valor_balao, taxas[tipo_balao], qtd_baloes)
+                    saldo_baloes = calcular_valor_presente_total(valor_balao, taxas[tipo_balao.lower()], qtd_baloes)
                     saldo_parcelas = max(valor_financiado - saldo_baloes, 0)
                     valor_parcela = calcular_parcela(saldo_parcelas, taxas['mensal'], qtd_parcelas)
             elif modo == 3:  # Só balão anual
@@ -621,7 +625,7 @@ def main():
                 qtd_parcelas, 
                 qtd_baloes, 
                 modalidade, 
-                tipo_balao,
+                tipo_balao.lower(),
                 data_entrada, 
                 taxas
             )
