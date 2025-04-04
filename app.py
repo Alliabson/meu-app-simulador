@@ -6,51 +6,19 @@ from io import BytesIO
 import os
 import subprocess
 import sys
-import re
 
 # Configura locale antes de qualquer operação
-def configure_locale():
-    try:
-        # Tentativas de configuração do locale em ordem de preferência
-        locale_options = [
-            'pt_BR.UTF-8',          # Linux
-            'Portuguese_Brazil.1252',  # Windows
-            'pt_BR',                # MacOS e outros
-            'pt_br',                # Alternativa
-            'pt'                    # Fallback mínimo
-        ]
-        
-        # No Streamlit Cloud, precisamos gerar o locale primeiro
-        if sys.platform == 'linux':
-            try:
-                subprocess.run(['locale-gen', 'pt_BR.UTF-8'], check=True)
-                subprocess.run(['update-locale', 'LANG=pt_BR.UTF-8'], check=True)
-                os.environ['LANG'] = 'pt_BR.UTF-8'
-                os.environ['LC_ALL'] = 'pt_BR.UTF-8'
-            except:
-                pass
-        
-        # Tenta cada locale até encontrar um que funcione
-        for loc in locale_options:
-            try:
-                locale.setlocale(locale.LC_ALL, loc)
-                os.environ['LANG'] = loc
-                os.environ['LC_ALL'] = loc
-                return True
-            except locale.Error:
-                continue
-        
-        # Se nenhum funcionar, força a configuração básica
-        locale.setlocale(locale.LC_ALL, 'C')
-        return False
-    except Exception as e:
-        print(f"Erro ao configurar locale: {e}")
-        locale.setlocale(locale.LC_ALL, 'C')
-        return False
+if not os.environ.get('LANG'):
+    os.environ['LANG'] = 'pt_BR.UTF-8'
 
-# Chama a função de configuração do locale
-if not configure_locale():
-    st.warning("Configuração de locale pt_BR não disponível. Algumas formatações podem não aparecer corretamente.")
+try:
+    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+except locale.Error:
+    try:
+        locale.setlocale(locale.LC_ALL, 'Portuguese_Brazil.1252')
+    except locale.Error:
+        locale.setlocale(locale.LC_ALL, 'C.UTF-8')
+        st.warning("Configuração de locale específica não disponível. Usando padrão internacional.")
 
 # Instalação garantida de dependências
 def install_and_import(package, import_name=None):
