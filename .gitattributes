@@ -1,0 +1,8 @@
+arquivo filter=lfs diff=lfs merge=lfs -text
+grande) filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+(ou filter=lfs diff=lfs merge=lfs -text
+o filter=lfs diff=lfs merge=lfs -text
+formato filter=lfs diff=lfs merge=lfs -text
+do filter=lfs diff=lfs merge=lfs -text
+seu filter=lfs diff=lfs merge=lfs -text
