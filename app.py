@@ -6,26 +6,29 @@ from io import BytesIO
 import os
 import subprocess
 import sys
+import re  # Adicionando a importação faltante
 
-# Configura locale antes de qualquer operação
-if not os.environ.get('LANG'):
-    os.environ['LANG'] = 'pt_BR.UTF-8'
-
-# Configura locale antes de qualquer operação
-try:
-    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-except locale.Error:
+# Configuração robusta do locale
+def configure_locale():
     try:
-        locale.setlocale(locale.LC_ALL, 'pt_BR')
+        # Tenta configurar o locale específico do Brasil
+        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
     except locale.Error:
         try:
-            locale.setlocale(locale.LC_ALL, 'Portuguese_Brazil.1252')
+            locale.setlocale(locale.LC_ALL, 'pt_BR')
         except locale.Error:
             try:
-                locale.setlocale(locale.LC_ALL, '')
+                locale.setlocale(locale.LC_ALL, 'Portuguese_Brazil.1252')
             except locale.Error:
-                locale.setlocale(locale.LC_ALL, 'C.UTF-8')
-                st.warning("Configuração de locale específica não disponível. Usando padrão internacional.")
+                try:
+                    locale.setlocale(locale.LC_ALL, '')
+                except locale.Error:
+                    # Fallback para locale neutro
+                    locale.setlocale(locale.LC_ALL, 'C.UTF-8')
+                    st.warning("Configuração de locale específica não disponível. Usando padrão internacional.")
+
+# Configura o locale no início da execução
+configure_locale()
 
 # Instalação garantida de dependências
 def install_and_import(package, import_name=None):
