@@ -1,5 +1,6 @@
 import streamlit as st
 from datetime import datetime, timedelta
+from PIL import Image
 import locale
 from math import ceil
 from io import BytesIO
@@ -43,6 +44,16 @@ pd = install_and_import('pandas')
 np = install_and_import('numpy')
 FPDF = install_and_import('fpdf2', 'fpdf').FPDF
 npf = install_and_import('numpy-financial', 'numpy_financial')
+
+@st.cache_data
+def load_logo():
+    try:
+        # Tenta carregar a imagem localmente
+        logo = Image.open("Celeste_Logo_Nova_2.png")
+        return logo
+    except Exception as e:
+        st.warning(f"Não foi possível carregar a logo: {str(e)}")
+        return None
 
 #Executar em wide
 st.set_page_config(layout="wide")
@@ -558,8 +569,18 @@ def gerar_excel(cronograma):
 
 def main():
     set_theme()
-    st.title("Simulador Imobiliária Celeste")
     
+    # Layout com logo e título
+    logo = load_logo()
+    if logo:
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.image(logo, width=150, use_container_width=False)
+        with col2:
+            st.title("Simulador Imobiliária Celeste")
+    else:
+        st.title("Simulador Imobiliária Celeste")   
+   
     # Inicializa variáveis de sessão
     if 'valor_total' not in st.session_state:
         st.session_state.valor_total = 500000.0
