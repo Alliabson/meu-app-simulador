@@ -125,33 +125,39 @@ def set_theme():
     </style>
     """, unsafe_allow_html=True)
 
+# Função de formatação de moeda robusta
 def formatar_moeda(valor, simbolo=True):
+    """Formata valores monetários com fallback manual"""
     try:
         if valor is None:
             return "R$ 0,00" if simbolo else "0,00"
+        
+        # Converte para float se for string
         if isinstance(valor, str):
-            # Remove caracteres não numéricos
-            valor = valor.replace('R$', '').replace('.', '').replace(',', '.')
+            valor = re.sub(r'[^\d,]', '', valor).replace(',', '.')
             valor = float(valor)
         
-        # Formatação manual para garantir o padrão pt_BR
-        valor_formatado = f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        # Formatação manual independente do locale
+        valor_abs = abs(valor)
+        parte_inteira = int(valor_abs)
+        parte_decimal = int(round((valor_abs - parte_inteira) * 100))
+        
+        # Formata parte inteira com separadores de milhar
+        parte_inteira_str = f"{parte_inteira:,}".replace(",", ".")
+        
+        # Monta o resultado
+        valor_formatado = f"{parte_inteira_str},{parte_decimal:02d}"
+        
+        # Adiciona sinal negativo se necessário
+        if valor < 0:
+            valor_formatado = f"-{valor_formatado}"
+        
+        # Adiciona símbolo se solicitado
         if simbolo:
             return f"R$ {valor_formatado}"
         return valor_formatado
-    except:
+    except Exception:
         return "R$ 0,00" if simbolo else "0,00"
-
-def parse_moeda(valor_str):
-    try:
-        if isinstance(valor_str, (int, float)):
-            return float(valor_str)
-        
-        # Remove R$, pontos e espaços, substitui vírgula por ponto
-        valor_limpo = re.sub(r'[^\d,]', '', valor_str).replace(',', '.')
-        return float(valor_limpo)
-    except:
-        return 0.0
 
 def calcular_taxas(taxa_mensal):
     try:
