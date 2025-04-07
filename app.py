@@ -173,6 +173,12 @@ def formatar_moeda(valor, simbolo=True):
     except Exception:
         return "R$ 0,00" if simbolo else "0,00"
 
+def reiniciar_campos():
+    st.session_state.valor_total = 500000.0
+    st.session_state.entrada = 50000.0
+    st.session_state.valor_parcela = 0.0
+    st.session_state.valor_balao = 0.0
+
 def calcular_taxas(taxa_mensal):
     try:
         taxa_mensal_decimal = float(taxa_mensal) / 100
@@ -664,8 +670,18 @@ def main():
             comissao_coordenacao = st.number_input("Comissão de Coordenação (%)", min_value=0.0, value=0.5, step=0.1)
             comissao_imobiliaria = st.number_input("Comissão Imobiliária (%)", min_value=0.0, value=5.0, step=0.1)
         
-        # Botão de submit dentro do form
-        submitted = st.form_submit_button("Calcular")
+        # Botões lado a lado
+        col_btn1, col_btn2 = st.columns(2)
+        
+        with col_btn1:
+            # Botão de submit dentro do form
+            submitted = st.form_submit_button("Calcular")
+        
+        with col_btn2:
+            # Botão de reiniciar
+            if st.form_submit_button("Reiniciar"):
+                reiniciar_campos()
+                st.rerun()
     
     if submitted:
         try:
@@ -722,6 +738,7 @@ def main():
                 tipo_balao.lower() if tipo_balao else None,
                 data_entrada, 
                 taxas
+           
             )
             
             # Mostrar resultados
