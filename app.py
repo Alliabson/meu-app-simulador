@@ -45,11 +45,12 @@ np = install_and_import('numpy')
 FPDF = install_and_import('fpdf2', 'fpdf').FPDF
 npf = install_and_import('numpy-financial', 'numpy_financial')
 
-@st.cache_data
+@st.cache_data(ttl=86400)  # Cache por 24 horas
 def load_logo():
     try:
-        # Tenta carregar a imagem localmente
+        # Reduzindo o tamanho da imagem antes de carregar
         logo = Image.open("JMD HAMOA HORIZONTAL - BRANCO.png")
+        logo.thumbnail((300, 300))  # Redimensiona mantendo aspect ratio
         return logo
     except Exception as e:
         st.warning(f"Não foi possível carregar a logo: {str(e)}")
