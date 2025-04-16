@@ -4,3 +4,5 @@ fpdf2
 numpy
 numpy-financial
 openpyxl
+plotly>=5.0.0
+kaleido  # Necessário para exportação estática de imagens do Plotly
